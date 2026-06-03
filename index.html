@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Centro de Reforço Escolar Nota 10</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f4f6f9;margin:0}
+header{background:#1e3a8a;color:#fff;padding:15px;text-align:center}
+.container{max-width:1100px;margin:20px auto;padding:15px}
+.card{background:#fff;padding:20px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.1);margin-bottom:20px}
+input,select,textarea{width:100%;padding:10px;margin:5px 0 15px;border:1px solid #ccc;border-radius:5px}
+button{padding:10px 15px;border:none;border-radius:5px;background:#1e3a8a;color:#fff;cursor:pointer}
+.hidden{display:none}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:15px}
+.prof{background:#eef;padding:10px;border-radius:6px}
+table{width:100%;border-collapse:collapse}
+td,th{border:1px solid #ddd;padding:8px}
+</style>
+</head>
+<body>
+<header><h1>Centro de Reforço Escolar Nota 10</h1></header>
+<div class="container">
+
+<div id="auth">
+<div class="card">
+<h2>Cadastro</h2>
+<input id="cnome" placeholder="Nome">
+<input id="cemail" placeholder="Email">
+<input id="csenha" type="password" placeholder="Senha">
+<button onclick="cadastro()">Cadastrar</button>
+</div>
+
+<div class="card">
+<h2>Login</h2>
+<input id="lemail" placeholder="Email">
+<input id="lsenha" type="password" placeholder="Senha">
+<button onclick="login()">Entrar</button>
+<p>Administrador: admin@nota10.com / 123456</p>
+</div>
+</div>
+
+<div id="usuarioArea" class="hidden">
+<div class="card">
+<h2>Área do Usuário <button onclick="logout()">Sair</button></h2>
+</div>
+
+<div class="card">
+<h2>Professores</h2>
+<div id="listaProfs" class="grid"></div>
+</div>
+
+<div class="card">
+<h2>Agendar Aula Experimental</h2>
+<input id="aluno" placeholder="Nome do aluno">
+<select id="disciplina"></select>
+<textarea id="obs" placeholder="Observações"></textarea>
+<button onclick="agendar()">Agendar</button>
+</div>
+</div>
+
+<div id="adminArea" class="hidden">
+<div class="card">
+<h2>Painel Administrativo <button onclick="logout()">Sair</button></h2>
+</div>
+
+<div class="card">
+<h3>Cadastrar Professor</h3>
+<input id="pnome" placeholder="Nome">
+<input id="pdisc" placeholder="Disciplina">
+<button onclick="salvarProfessor()">Salvar Professor</button>
+</div>
+
+<div class="card">
+<h3>Professores</h3>
+<div id="adminProfs"></div>
+</div>
+
+<div class="card">
+<h3>Agendamentos</h3>
+<table>
+<thead><tr><th>Aluno</th><th>Disciplina</th><th>Obs</th></tr></thead>
+<tbody id="agends"></tbody>
+</table>
+</div>
+</div>
+
+</div>
+
+<script>
+if(!localStorage.usuarios){
+ localStorage.usuarios='[{"nome":"Administrador","email":"admin@nota10.com","senha":"123456","admin":true}]';
+}
+if(!localStorage.professores){
+ localStorage.professores=JSON.stringify([
+ {id:1,nome:"Maria Oliveira",disc:"Matemática"},
+ {id:2,nome:"João Santos",disc:"Português"}
+ ]);
+}
+if(!localStorage.agendamentos)localStorage.agendamentos='[]';
+
+function cadastro(){
+ let u=JSON.parse(localStorage.usuarios);
+ u.push({nome:cnome.value,email:cemail.value,senha:csenha.value,admin:false});
+ localStorage.usuarios=JSON.stringify(u);
+ alert("Cadastrado!");
+}
+function login(){
+ let u=JSON.parse(localStorage.usuarios).find(x=>x.email==lemail.value&&x.senha==lsenha.value);
+ if(!u)return alert("Login inválido");
+ localStorage.logado=JSON.stringify(u);
+ carregar();
+}
+function logout(){localStorage.removeItem("logado");location.reload();}
+
+function carregar(){
+ let u=JSON.parse(localStorage.logado||"null");
+ if(!u)return;
+ auth.classList.add("hidden");
+ if(u.admin){adminArea.classList.remove("hidden");renderAdmin();}
+ else{usuarioArea.classList.remove("hidden");renderUser();}
+}
+
+function renderUser(){
+ let profs=JSON.parse(localStorage.professores);
+ listaProfs.innerHTML="";
+ disciplina.innerHTML="";
+ profs.forEach(p=>{
+  listaProfs.innerHTML+=`<div class="prof"><b>${p.nome}</b><br>${p.disc}</div>`;
+  disciplina.innerHTML+=`<option>${p.disc}</option>`;
+ });
+}
+
+function agendar(){
+ let a=JSON.parse(localStorage.agendamentos);
+ a.push({aluno:aluno.value,disc:disciplina.value,obs:obs.value});
+ localStorage.agendamentos=JSON.stringify(a);
+ alert("Agendamento realizado!");
+}
+
+function salvarProfessor(){
+ let p=JSON.parse(localStorage.professores);
+ p.push({id:Date.now(),nome:pnome.value,disc:pdisc.value});
+ localStorage.professores=JSON.stringify(p);
+ renderAdmin();
+}
+
+function excluirProfessor(id){
+ let p=JSON.parse(localStorage.professores).filter(x=>x.id!=id);
+ localStorage.professores=JSON.stringify(p);
+ renderAdmin();
+}
+
+function renderAdmin(){
+ let p=JSON.parse(localStorage.professores);
+ adminProfs.innerHTML="";
+ p.forEach(x=>{
+ adminProfs.innerHTML+=`<p>${x.nome} - ${x.disc}
+ <button onclick="excluirProfessor(${x.id})">Excluir</button></p>`;
+ });
+ let a=JSON.parse(localStorage.agendamentos);
+ agends.innerHTML="";
+ a.forEach(x=>agends.innerHTML+=`<tr><td>${x.aluno}</td><td>${x.disc}</td><td>${x.obs}</td></tr>`);
+}
+carregar();
+</script>
+</body>
+</html>
