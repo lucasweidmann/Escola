@@ -54,7 +54,13 @@ td,th{border:1px solid #ddd;padding:8px}
 <h2>Agendar Aula Experimental</h2>
 <input id="aluno" placeholder="Nome do aluno">
 <select id="disciplina"></select>
+
+<input type="date" id="dataAula">
+
+<input type="time" id="horarioAula">
+
 <textarea id="obs" placeholder="Observações"></textarea>
+
 <button onclick="agendar()">Agendar</button>
 </div>
 </div>
@@ -79,7 +85,15 @@ td,th{border:1px solid #ddd;padding:8px}
 <div class="card">
 <h3>Agendamentos</h3>
 <table>
-<thead><tr><th>Aluno</th><th>Disciplina</th><th>Obs</th></tr></thead>
+    <thead>
+        <tr>
+        <th>Aluno</th>
+        <th>Disciplina</th>
+        <th>Data</th>
+        <th>Horário</th>
+        <th>Obs</th>
+        </tr>
+        </thead>
 <tbody id="agends"></tbody>
 </table>
 </div>
@@ -132,9 +146,18 @@ function renderUser(){
 }
 
 function agendar(){
- let a=JSON.parse(localStorage.agendamentos);
- a.push({aluno:aluno.value,disc:disciplina.value,obs:obs.value});
- localStorage.agendamentos=JSON.stringify(a);
+ let a = JSON.parse(localStorage.agendamentos);
+
+ a.push({
+   aluno: aluno.value,
+   disc: disciplina.value,
+   data: dataAula.value,
+   horario: horarioAula.value,
+   obs: obs.value
+ });
+
+ localStorage.agendamentos = JSON.stringify(a);
+
  alert("Agendamento realizado!");
 }
 
@@ -160,7 +183,16 @@ function renderAdmin(){
  });
  let a=JSON.parse(localStorage.agendamentos);
  agends.innerHTML="";
- a.forEach(x=>agends.innerHTML+=`<tr><td>${x.aluno}</td><td>${x.disc}</td><td>${x.obs}</td></tr>`);
+ a.forEach(x=>{
+ agends.innerHTML += `
+ <tr>
+   <td>${x.aluno}</td>
+   <td>${x.disc}</td>
+   <td>${x.data}</td>
+   <td>${x.horario}</td>
+   <td>${x.obs}</td>
+ </tr>`;
+});
 }
 carregar();
 </script>
