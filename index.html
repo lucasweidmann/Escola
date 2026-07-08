@@ -276,12 +276,13 @@
       .table-wrap {
         border: 1px solid var(--line);
         border-radius: 12px;
-        overflow: hidden;
+        overflow-x: auto;
       }
       table {
         width: 100%;
         border-collapse: collapse;
         font-size: 0.9rem;
+        white-space: nowrap;
       }
       thead th {
         background: var(--navy);
@@ -304,8 +305,12 @@
       tbody tr:hover {
         background: rgba(238, 183, 58, 0.14);
       }
+      td select {
+        width: auto;
+        padding: 4px 8px;
+        font-size: 0.8rem;
+      }
 
-      /* estiliza a lista de professores gerada pelo painel admin sem alterar o JS */
       #adminProfs p {
         display: flex;
         align-items: center;
@@ -421,23 +426,67 @@
 
         <div class="card">
           <h3>Agendar Aula Experimental</h3>
+          <div class="row-2">
+            <div class="form-group">
+              <label for="respNome">Nome do responsável</label>
+              <input id="respNome" placeholder="Nome do responsável" />
+            </div>
+            <div class="form-group">
+              <label for="respTel">Telefone</label>
+              <input id="respTel" placeholder="(XX) XXXXX-XXXX" />
+            </div>
+          </div>
           <div class="form-group">
-            <label for="aluno">Nome do aluno</label>
-            <input id="aluno" placeholder="Nome do aluno" />
+            <label for="respEmail">E-mail</label>
+            <input id="respEmail" type="email" placeholder="email@exemplo.com" />
           </div>
           <div class="row-2">
             <div class="form-group">
-              <label for="disciplina">Disciplina</label>
-              <select id="disciplina"></select>
+              <label for="aluno">Nome do aluno</label>
+              <input id="aluno" placeholder="Nome do aluno" />
             </div>
             <div class="form-group">
-              <label for="dataAula">Data</label>
-              <input type="date" id="dataAula" />
+              <label for="anoEscolar">Ano escolar</label>
+              <select id="anoEscolar">
+                <option value="">Selecione</option>
+                <option>1º Ano EF</option>
+                <option>2º Ano EF</option>
+                <option>3º Ano EF</option>
+                <option>4º Ano EF</option>
+                <option>5º Ano EF</option>
+                <option>6º Ano EF</option>
+                <option>7º Ano EF</option>
+                <option>8º Ano EF</option>
+                <option>9º Ano EF</option>
+                <option>1ª Série EM</option>
+                <option>2ª Série EM</option>
+                <option>3ª Série EM</option>
+              </select>
             </div>
           </div>
-          <div class="form-group">
-            <label for="horarioAula">Horário</label>
-            <input type="time" id="horarioAula" />
+          <div class="row-2">
+            <div class="form-group">
+              <label for="disciplina">Matéria com dificuldade</label>
+              <select id="disciplina">
+                <option value="">Selecione</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="professorSelect">Professor de interesse</label>
+              <select id="professorSelect">
+                <option value="">Selecione</option>
+              </select>
+            </div>
+          </div>
+          <div class="row-2">
+            <div class="form-group">
+              <label for="dataAula">Data desejada</label>
+              <input type="date" id="dataAula" />
+            </div>
+            <div class="form-group">
+              <label for="horarioAula">Horário desejado</label>
+              <input type="time" id="horarioAula" />
+            </div>
           </div>
           <div class="form-group">
             <label for="obs">Observações</label>
@@ -481,11 +530,20 @@
             <table>
               <thead>
                 <tr>
+                  <th>ID</th>
+                  <th>Resp. Nome</th>
+                  <th>Tel</th>
+                  <th>Email</th>
                   <th>Aluno</th>
-                  <th>Disciplina</th>
+                  <th>Ano</th>
+                  <th>Matéria</th>
+                  <th>Professor</th>
                   <th>Data</th>
                   <th>Horário</th>
                   <th>Obs</th>
+                  <th>Status</th>
+                  <th>Cadastro</th>
+                  <th>Ação</th>
                 </tr>
               </thead>
               <tbody id="agends"></tbody>
@@ -496,115 +554,291 @@
     </div>
 
     <script>
-      if (!localStorage.usuarios) {
-        localStorage.usuarios =
-          '[{"nome":"Administrador","email":"admin@nota10.com","senha":"123456","admin":true}]';
-      }
-      if (!localStorage.professores) {
-        localStorage.professores = JSON.stringify([
-          { id: 1, nome: "Maria Oliveira", disc: "Matemática" },
-          { id: 2, nome: "João Santos", disc: "Português" },
-        ]);
-      }
-      if (!localStorage.agendamentos) localStorage.agendamentos = "[]";
-
-      function cadastro() {
-        let u = JSON.parse(localStorage.usuarios);
-        u.push({
-          nome: cnome.value,
-          email: cemail.value,
-          senha: csenha.value,
-          admin: false,
-        });
-        localStorage.usuarios = JSON.stringify(u);
-        alert("Cadastrado!");
-      }
-      function login() {
-        let u = JSON.parse(localStorage.usuarios).find(
-          (x) => x.email == lemail.value && x.senha == lsenha.value,
-        );
-        if (!u) return alert("Login inválido");
-        localStorage.logado = JSON.stringify(u);
-        carregar();
-      }
-      function logout() {
-        localStorage.removeItem("logado");
-        location.reload();
-      }
-
-      function carregar() {
-        let u = JSON.parse(localStorage.logado || "null");
-        if (!u) return;
-        auth.classList.add("hidden");
-        if (u.admin) {
-          adminArea.classList.remove("hidden");
-          renderAdmin();
-        } else {
-          usuarioArea.classList.remove("hidden");
-          renderUser();
+      (function () {
+        /* ---------- DADOS INICIAIS ---------- */
+        if (!localStorage.usuarios) {
+          localStorage.usuarios = JSON.stringify([
+            { nome: "Administrador", email: "admin@nota10.com", senha: "123456", admin: true }
+          ]);
         }
-      }
+        if (!localStorage.professores) {
+          localStorage.professores = JSON.stringify([
+            { id: 1, nome: "Maria Oliveira", disc: "Matemática" },
+            { id: 2, nome: "João Santos", disc: "Português" }
+          ]);
+        }
+        if (!localStorage.agendamentos) localStorage.agendamentos = "[]";
 
-      function renderUser() {
-        let profs = JSON.parse(localStorage.professores);
-        listaProfs.innerHTML = "";
-        disciplina.innerHTML = "";
-        profs.forEach((p) => {
-          listaProfs.innerHTML += `<div class="prof"><b>${p.nome}</b><br>${p.disc}</div>`;
-          disciplina.innerHTML += `<option>${p.disc}</option>`;
-        });
-      }
+        /* ---------- UTILITÁRIOS ---------- */
+        function getLogado() {
+          return JSON.parse(localStorage.logado || "null");
+        }
 
-      function agendar() {
-        let a = JSON.parse(localStorage.agendamentos);
+        function salvarAgendamentos(lista) {
+          localStorage.agendamentos = JSON.stringify(lista);
+          // confirma que salvou relendo
+          const salvo = localStorage.agendamentos;
+          return salvo === JSON.stringify(lista);
+        }
 
-        a.push({
-          aluno: aluno.value,
-          disc: disciplina.value,
-          data: dataAula.value,
-          horario: horarioAula.value,
-          obs: obs.value,
-        });
+        /* ---------- AUTENTICAÇÃO ---------- */
+        window.cadastro = function () {
+          const nome = cnome.value.trim();
+          const email = cemail.value.trim();
+          const senha = csenha.value;
+          if (!nome || !email || !senha) {
+            alert("Preencha todos os campos de cadastro.");
+            return;
+          }
+          let usuarios = JSON.parse(localStorage.usuarios);
+          if (usuarios.find(u => u.email === email)) {
+            alert("E-mail já cadastrado.");
+            return;
+          }
+          usuarios.push({ nome, email, senha, admin: false });
+          localStorage.usuarios = JSON.stringify(usuarios);
+          alert("Cadastro realizado com sucesso!");
+          cnome.value = cemail.value = csenha.value = "";
+        };
 
-        localStorage.agendamentos = JSON.stringify(a);
+        window.login = function () {
+          const email = lemail.value.trim();
+          const senha = lsenha.value;
+          const usuario = JSON.parse(localStorage.usuarios).find(
+            u => u.email === email && u.senha === senha
+          );
+          if (!usuario) {
+            alert("E-mail ou senha inválidos.");
+            return;
+          }
+          localStorage.logado = JSON.stringify(usuario);
+          carregar();
+        };
 
-        alert("Agendamento realizado!");
-      }
+        window.logout = function () {
+          localStorage.removeItem("logado");
+          location.reload();
+        };
 
-      function salvarProfessor() {
-        let p = JSON.parse(localStorage.professores);
-        p.push({ id: Date.now(), nome: pnome.value, disc: pdisc.value });
-        localStorage.professores = JSON.stringify(p);
-        renderAdmin();
-      }
+        /* ---------- INTERFACE PRINCIPAL ---------- */
+        function carregar() {
+          const logado = getLogado();
+          if (!logado) return;
 
-      function excluirProfessor(id) {
-        let p = JSON.parse(localStorage.professores).filter((x) => x.id != id);
-        localStorage.professores = JSON.stringify(p);
-        renderAdmin();
-      }
+          auth.classList.add("hidden");
+          usuarioArea.classList.add("hidden");
+          adminArea.classList.add("hidden");
 
-      function renderAdmin() {
-        let p = JSON.parse(localStorage.professores);
-        adminProfs.innerHTML = "";
-        p.forEach((x) => {
-          adminProfs.innerHTML += `<p>${x.nome} - ${x.disc}
- <button onclick="excluirProfessor(${x.id})">Excluir</button></p>`;
-        });
-        let a = JSON.parse(localStorage.agendamentos);
-        agends.innerHTML = "";
-        a.forEach((x) => {
-          agends.innerHTML += `
- <tr>
-   <td>${x.aluno}</td>
-   <td>${x.disc}</td>
-   <td>${x.data}</td>
-   <td>${x.horario}</td>
-   <td>${x.obs}</td>
- </tr>`;
-        });
-      }
-      carregar();
+          if (logado.admin) {
+            adminArea.classList.remove("hidden");
+            renderAdmin();
+          } else {
+            usuarioArea.classList.remove("hidden");
+            renderUser();
+          }
+        }
+
+        /* ---------- ÁREA DO USUÁRIO ---------- */
+        function renderUser() {
+          const profs = JSON.parse(localStorage.professores);
+          const listaProfsEl = document.getElementById("listaProfs");
+          const disciplinaEl = document.getElementById("disciplina");
+          const professorSelectEl = document.getElementById("professorSelect");
+
+          // Cards de professores
+          listaProfsEl.innerHTML = profs
+            .map(p => `<div class="prof"><b>${p.nome}</b><span class="pill">${p.disc}</span></div>`)
+            .join("");
+
+          // Disciplinas únicas
+          const disciplinas = [...new Set(profs.map(p => p.disc))];
+          disciplinaEl.innerHTML = '<option value="">Selecione</option>' +
+            disciplinas.map(d => `<option>${d}</option>`).join("");
+
+          // Select de professor
+          professorSelectEl.innerHTML = '<option value="">Selecione</option>' +
+            profs.map(p => `<option value="${p.nome}">${p.nome} (${p.disc})</option>`).join("");
+        }
+
+        /* ---------- VALIDAÇÃO DO AGENDAMENTO ---------- */
+        function validarAgendamento() {
+          const respNome = document.getElementById("respNome").value.trim();
+          const respTel = document.getElementById("respTel").value.trim();
+          const respEmail = document.getElementById("respEmail").value.trim();
+          const aluno = document.getElementById("aluno").value.trim();
+          const ano = document.getElementById("anoEscolar").value;
+          const materia = document.getElementById("disciplina").value;
+          const professor = document.getElementById("professorSelect").value;
+          const data = document.getElementById("dataAula").value;
+          const horario = document.getElementById("horarioAula").value;
+
+          if (!respNome) return "Informe o nome do responsável.";
+          if (respNome.replace(/\s/g, "").length === 0) return "O nome do responsável não pode conter apenas espaços.";
+
+          if (!respTel) return "Informe um telefone.";
+          const apenasNumeros = respTel.replace(/\D/g, "");
+          if (apenasNumeros.length < 10) return "Informe um telefone válido (mínimo 10 dígitos).";
+
+          if (!respEmail) return "Informe um e-mail.";
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(respEmail)) return "Informe um e-mail válido.";
+
+          if (!aluno) return "Informe o nome do aluno.";
+          if (aluno.replace(/\s/g, "").length === 0) return "O nome do aluno não pode conter apenas espaços.";
+
+          if (!ano) return "Selecione o ano escolar.";
+          if (!materia) return "Selecione uma matéria.";
+          if (!professor) return "Selecione um professor.";
+          if (!data) return "Escolha uma data.";
+          if (!horario) return "Escolha um horário.";
+
+          return null; // sem erros
+        }
+
+        /* ---------- AGENDAMENTO ---------- */
+        window.agendar = function () {
+          const erro = validarAgendamento();
+          if (erro) {
+            alert(erro);
+            return;
+          }
+
+          const aluno = document.getElementById("aluno").value.trim();
+          const materia = document.getElementById("disciplina").value;
+          const data = document.getElementById("dataAula").value;
+          const horario = document.getElementById("horarioAula").value;
+
+          // Verifica duplicidade (aluno + matéria + data + horário)
+          const agendamentos = JSON.parse(localStorage.agendamentos);
+          const duplicado = agendamentos.some(a =>
+            a.aluno.toLowerCase() === aluno.toLowerCase() &&
+            a.materia === materia &&
+            a.data === data &&
+            a.horario === horario
+          );
+          if (duplicado) {
+            alert("Já existe um agendamento para esse aluno nesta matéria, data e horário.");
+            return;
+          }
+
+          const agora = new Date();
+          const dataCadastro = agora.toLocaleDateString("pt-BR") + " " +
+            agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+          const novo = {
+            id: Date.now(),
+            respNome: document.getElementById("respNome").value.trim(),
+            respTel: document.getElementById("respTel").value.trim(),
+            respEmail: document.getElementById("respEmail").value.trim(),
+            aluno: aluno,
+            anoEscolar: document.getElementById("anoEscolar").value,
+            materia: materia,
+            professor: document.getElementById("professorSelect").value,
+            data: data,
+            horario: horario,
+            obs: document.getElementById("obs").value.trim(),
+            status: "Pendente",
+            dataCadastro: dataCadastro
+          };
+
+          agendamentos.push(novo);
+
+          if (salvarAgendamentos(agendamentos)) {
+            alert("Agendamento cadastrado com sucesso.");
+            // limpa formulário
+            document.getElementById("respNome").value = "";
+            document.getElementById("respTel").value = "";
+            document.getElementById("respEmail").value = "";
+            document.getElementById("aluno").value = "";
+            document.getElementById("anoEscolar").value = "";
+            document.getElementById("disciplina").value = "";
+            document.getElementById("professorSelect").value = "";
+            document.getElementById("dataAula").value = "";
+            document.getElementById("horarioAula").value = "";
+            document.getElementById("obs").value = "";
+          } else {
+            alert("Erro ao salvar o agendamento. Tente novamente.");
+          }
+        };
+
+        /* ---------- ADMINISTRAÇÃO ---------- */
+        window.salvarProfessor = function () {
+          const nome = document.getElementById("pnome").value.trim();
+          const disc = document.getElementById("pdisc").value.trim();
+          if (!nome || !disc) {
+            alert("Preencha nome e disciplina do professor.");
+            return;
+          }
+          const profs = JSON.parse(localStorage.professores);
+          profs.push({ id: Date.now(), nome, disc });
+          localStorage.professores = JSON.stringify(profs);
+          document.getElementById("pnome").value = "";
+          document.getElementById("pdisc").value = "";
+          renderAdmin();
+        };
+
+        window.excluirProfessor = function (id) {
+          let profs = JSON.parse(localStorage.professores).filter(p => p.id !== id);
+          localStorage.professores = JSON.stringify(profs);
+          renderAdmin();
+        };
+
+        window.alterarStatus = function (id, novoStatus) {
+          const agendamentos = JSON.parse(localStorage.agendamentos);
+          const ag = agendamentos.find(a => a.id === id);
+          if (ag) {
+            ag.status = novoStatus;
+            localStorage.agendamentos = JSON.stringify(agendamentos);
+            renderAdmin(); // recarrega a tabela
+          }
+        };
+
+        function renderAdmin() {
+          const profs = JSON.parse(localStorage.professores);
+          const adminProfsEl = document.getElementById("adminProfs");
+          adminProfsEl.innerHTML = profs
+            .map(p => `<p>${p.nome} - ${p.disc} <button onclick="excluirProfessor(${p.id})">Excluir</button></p>`)
+            .join("");
+
+          const agendamentos = JSON.parse(localStorage.agendamentos);
+          const agendsEl = document.getElementById("agends");
+          const statusOptions = ["Pendente", "Confirmado", "Cancelado", "Concluído"];
+
+          agendsEl.innerHTML = agendamentos
+            .map(a => {
+              const options = statusOptions
+                .map(s => `<option value="${s}" ${a.status === s ? "selected" : ""}>${s}</option>`)
+                .join("");
+              return `
+                <tr>
+                  <td>${a.id}</td>
+                  <td>${a.respNome || ""}</td>
+                  <td>${a.respTel || ""}</td>
+                  <td>${a.respEmail || ""}</td>
+                  <td>${a.aluno || ""}</td>
+                  <td>${a.anoEscolar || ""}</td>
+                  <td>${a.materia || a.disc || ""}</td>
+                  <td>${a.professor || ""}</td>
+                  <td>${a.data || ""}</td>
+                  <td>${a.horario || ""}</td>
+                  <td>${a.obs || ""}</td>
+                  <td>${a.status || "Pendente"}</td>
+                  <td>${a.dataCadastro || ""}</td>
+                  <td>
+                    <select onchange="alterarStatus(${a.id}, this.value)">
+                      ${options}
+                    </select>
+                  </td>
+                </tr>`;
+            })
+            .join("");
+        }
+
+        // compatibilidade: exibe dados antigos (anteriores à migração) com fallback
+        // Já tratado nos templates com || "" e || "Pendente"
+
+        carregar();
+      })();
     </script>
   </body>
 </html>
