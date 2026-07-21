@@ -273,6 +273,13 @@
         margin-top: 2px;
       }
 
+      .field-error {
+        color: var(--coral-dark);
+        font-size: 0.82rem;
+        margin-top: 6px;
+        display: block;
+      }
+
       .table-wrap {
         border: 1px solid var(--line);
         border-radius: 12px;
@@ -438,7 +445,11 @@
           </div>
           <div class="form-group">
             <label for="respEmail">E-mail</label>
-            <input id="respEmail" type="email" placeholder="email@exemplo.com" />
+            <input
+              id="respEmail"
+              type="email"
+              placeholder="email@exemplo.com"
+            />
           </div>
           <div class="row-2">
             <div class="form-group">
@@ -558,13 +569,18 @@
         /* ---------- DADOS INICIAIS ---------- */
         if (!localStorage.usuarios) {
           localStorage.usuarios = JSON.stringify([
-            { nome: "Administrador", email: "admin@nota10.com", senha: "123456", admin: true }
+            {
+              nome: "Administrador",
+              email: "admin@nota10.com",
+              senha: "123456",
+              admin: true,
+            },
           ]);
         }
         if (!localStorage.professores) {
           localStorage.professores = JSON.stringify([
             { id: 1, nome: "Maria Oliveira", disc: "Matemática" },
-            { id: 2, nome: "João Santos", disc: "Português" }
+            { id: 2, nome: "João Santos", disc: "Português" },
           ]);
         }
         if (!localStorage.agendamentos) localStorage.agendamentos = "[]";
@@ -582,17 +598,53 @@
         }
 
         /* ---------- AUTENTICAÇÃO ---------- */
+        function clearAllFieldErrors() {
+          document
+            .querySelectorAll(".field-error")
+            .forEach((el) => el.remove());
+        }
+
+        function setFieldError(id, msg) {
+          const input = document.getElementById(id);
+          if (!input) return;
+          // remove existing
+          const next = input.parentNode.querySelector(".field-error");
+          if (next) next.remove();
+          const span = document.createElement("span");
+          span.className = "field-error";
+          span.textContent = msg;
+          input.parentNode.appendChild(span);
+        }
+
         window.cadastro = function () {
+          clearAllFieldErrors();
           const nome = cnome.value.trim();
           const email = cemail.value.trim();
           const senha = csenha.value;
-          if (!nome || !email || !senha) {
-            alert("Preencha todos os campos de cadastro.");
-            return;
+          let hasError = false;
+          if (!nome) {
+            setFieldError("cnome", "Informe seu nome.");
+            hasError = true;
           }
+          if (!email) {
+            setFieldError("cemail", "Informe seu e-mail.");
+            hasError = true;
+          } else {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+              setFieldError("cemail", "E-mail inválido.");
+              hasError = true;
+            }
+          }
+          if (!senha) {
+            setFieldError("csenha", "Informe uma senha.");
+            hasError = true;
+          }
+          if (hasError) return;
+
           let usuarios = JSON.parse(localStorage.usuarios);
-          if (usuarios.find(u => u.email === email)) {
-            alert("E-mail já cadastrado.");
+          if (usuarios.find((u) => u.email === email)) {
+            setFieldError("cemail", "E-mail já cadastrado.");
             return;
           }
           usuarios.push({ nome, email, senha, admin: false });
@@ -602,13 +654,25 @@
         };
 
         window.login = function () {
+          clearAllFieldErrors();
           const email = lemail.value.trim();
           const senha = lsenha.value;
+          let hasError = false;
+          if (!email) {
+            setFieldError("lemail", "Informe seu e-mail.");
+            hasError = true;
+          }
+          if (!senha) {
+            setFieldError("lsenha", "Informe sua senha.");
+            hasError = true;
+          }
+          if (hasError) return;
+
           const usuario = JSON.parse(localStorage.usuarios).find(
-            u => u.email === email && u.senha === senha
+            (u) => u.email === email && u.senha === senha,
           );
           if (!usuario) {
-            alert("E-mail ou senha inválidos.");
+            setFieldError("lemail", "E-mail ou senha inválidos.");
             return;
           }
           localStorage.logado = JSON.stringify(usuario);
@@ -647,21 +711,32 @@
 
           // Cards de professores
           listaProfsEl.innerHTML = profs
-            .map(p => `<div class="prof"><b>${p.nome}</b><span class="pill">${p.disc}</span></div>`)
+            .map(
+              (p) =>
+                `<div class="prof"><b>${p.nome}</b><span class="pill">${p.disc}</span></div>`,
+            )
             .join("");
 
           // Disciplinas únicas
-          const disciplinas = [...new Set(profs.map(p => p.disc))];
-          disciplinaEl.innerHTML = '<option value="">Selecione</option>' +
-            disciplinas.map(d => `<option>${d}</option>`).join("");
+          const disciplinas = [...new Set(profs.map((p) => p.disc))];
+          disciplinaEl.innerHTML =
+            '<option value="">Selecione</option>' +
+            disciplinas.map((d) => `<option>${d}</option>`).join("");
 
           // Select de professor
-          professorSelectEl.innerHTML = '<option value="">Selecione</option>' +
-            profs.map(p => `<option value="${p.nome}">${p.nome} (${p.disc})</option>`).join("");
+          professorSelectEl.innerHTML =
+            '<option value="">Selecione</option>' +
+            profs
+              .map(
+                (p) =>
+                  `<option value="${p.nome}">${p.nome} (${p.disc})</option>`,
+              )
+              .join("");
         }
 
         /* ---------- VALIDAÇÃO DO AGENDAMENTO ---------- */
         function validarAgendamento() {
+          clearAllFieldErrors();
           const respNome = document.getElementById("respNome").value.trim();
           const respTel = document.getElementById("respTel").value.trim();
           const respEmail = document.getElementById("respEmail").value.trim();
@@ -672,36 +747,82 @@
           const data = document.getElementById("dataAula").value;
           const horario = document.getElementById("horarioAula").value;
 
-          if (!respNome) return "Informe o nome do responsável.";
-          if (respNome.replace(/\s/g, "").length === 0) return "O nome do responsável não pode conter apenas espaços.";
+          let ok = true;
+          if (!respNome) {
+            setFieldError("respNome", "Informe o nome do responsável.");
+            ok = false;
+          } else if (respNome.replace(/\s/g, "").length === 0) {
+            setFieldError(
+              "respNome",
+              "O nome do responsável não pode conter apenas espaços.",
+            );
+            ok = false;
+          }
 
-          if (!respTel) return "Informe um telefone.";
-          const apenasNumeros = respTel.replace(/\D/g, "");
-          if (apenasNumeros.length < 10) return "Informe um telefone válido (mínimo 10 dígitos).";
+          if (!respTel) {
+            setFieldError("respTel", "Informe um telefone.");
+            ok = false;
+          } else {
+            const apenasNumeros = respTel.replace(/\D/g, "");
+            if (apenasNumeros.length < 10) {
+              setFieldError(
+                "respTel",
+                "Informe um telefone válido (mínimo 10 dígitos).",
+              );
+              ok = false;
+            }
+          }
 
-          if (!respEmail) return "Informe um e-mail.";
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          if (!emailRegex.test(respEmail)) return "Informe um e-mail válido.";
+          if (!respEmail) {
+            setFieldError("respEmail", "Informe um e-mail.");
+            ok = false;
+          } else {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(respEmail)) {
+              setFieldError("respEmail", "Informe um e-mail válido.");
+              ok = false;
+            }
+          }
 
-          if (!aluno) return "Informe o nome do aluno.";
-          if (aluno.replace(/\s/g, "").length === 0) return "O nome do aluno não pode conter apenas espaços.";
+          if (!aluno) {
+            setFieldError("aluno", "Informe o nome do aluno.");
+            ok = false;
+          } else if (aluno.replace(/\s/g, "").length === 0) {
+            setFieldError(
+              "aluno",
+              "O nome do aluno não pode conter apenas espaços.",
+            );
+            ok = false;
+          }
 
-          if (!ano) return "Selecione o ano escolar.";
-          if (!materia) return "Selecione uma matéria.";
-          if (!professor) return "Selecione um professor.";
-          if (!data) return "Escolha uma data.";
-          if (!horario) return "Escolha um horário.";
+          if (!ano) {
+            setFieldError("anoEscolar", "Selecione o ano escolar.");
+            ok = false;
+          }
+          if (!materia) {
+            setFieldError("disciplina", "Selecione uma matéria.");
+            ok = false;
+          }
+          if (!professor) {
+            setFieldError("professorSelect", "Selecione um professor.");
+            ok = false;
+          }
+          if (!data) {
+            setFieldError("dataAula", "Escolha uma data.");
+            ok = false;
+          }
+          if (!horario) {
+            setFieldError("horarioAula", "Escolha um horário.");
+            ok = false;
+          }
 
-          return null; // sem erros
+          return ok; // true = sem erros
         }
 
         /* ---------- AGENDAMENTO ---------- */
         window.agendar = function () {
-          const erro = validarAgendamento();
-          if (erro) {
-            alert(erro);
-            return;
-          }
+          const valido = validarAgendamento();
+          if (!valido) return;
 
           const aluno = document.getElementById("aluno").value.trim();
           const materia = document.getElementById("disciplina").value;
@@ -710,20 +831,28 @@
 
           // Verifica duplicidade (aluno + matéria + data + horário)
           const agendamentos = JSON.parse(localStorage.agendamentos);
-          const duplicado = agendamentos.some(a =>
-            a.aluno.toLowerCase() === aluno.toLowerCase() &&
-            a.materia === materia &&
-            a.data === data &&
-            a.horario === horario
+          const duplicado = agendamentos.some(
+            (a) =>
+              a.aluno.toLowerCase() === aluno.toLowerCase() &&
+              a.materia === materia &&
+              a.data === data &&
+              a.horario === horario,
           );
           if (duplicado) {
-            alert("Já existe um agendamento para esse aluno nesta matéria, data e horário.");
+            alert(
+              "Já existe um agendamento para esse aluno nesta matéria, data e horário.",
+            );
             return;
           }
 
           const agora = new Date();
-          const dataCadastro = agora.toLocaleDateString("pt-BR") + " " +
-            agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+          const dataCadastro =
+            agora.toLocaleDateString("pt-BR") +
+            " " +
+            agora.toLocaleTimeString("pt-BR", {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
 
           const novo = {
             id: Date.now(),
@@ -738,7 +867,7 @@
             horario: horario,
             obs: document.getElementById("obs").value.trim(),
             status: "Pendente",
-            dataCadastro: dataCadastro
+            dataCadastro: dataCadastro,
           };
 
           agendamentos.push(novo);
@@ -763,12 +892,19 @@
 
         /* ---------- ADMINISTRAÇÃO ---------- */
         window.salvarProfessor = function () {
+          clearAllFieldErrors();
           const nome = document.getElementById("pnome").value.trim();
           const disc = document.getElementById("pdisc").value.trim();
-          if (!nome || !disc) {
-            alert("Preencha nome e disciplina do professor.");
-            return;
+          let hasError = false;
+          if (!nome) {
+            setFieldError("pnome", "Informe o nome do professor.");
+            hasError = true;
           }
+          if (!disc) {
+            setFieldError("pdisc", "Informe a disciplina.");
+            hasError = true;
+          }
+          if (hasError) return;
           const profs = JSON.parse(localStorage.professores);
           profs.push({ id: Date.now(), nome, disc });
           localStorage.professores = JSON.stringify(profs);
@@ -778,14 +914,16 @@
         };
 
         window.excluirProfessor = function (id) {
-          let profs = JSON.parse(localStorage.professores).filter(p => p.id !== id);
+          let profs = JSON.parse(localStorage.professores).filter(
+            (p) => p.id !== id,
+          );
           localStorage.professores = JSON.stringify(profs);
           renderAdmin();
         };
 
         window.alterarStatus = function (id, novoStatus) {
           const agendamentos = JSON.parse(localStorage.agendamentos);
-          const ag = agendamentos.find(a => a.id === id);
+          const ag = agendamentos.find((a) => a.id === id);
           if (ag) {
             ag.status = novoStatus;
             localStorage.agendamentos = JSON.stringify(agendamentos);
@@ -797,17 +935,28 @@
           const profs = JSON.parse(localStorage.professores);
           const adminProfsEl = document.getElementById("adminProfs");
           adminProfsEl.innerHTML = profs
-            .map(p => `<p>${p.nome} - ${p.disc} <button onclick="excluirProfessor(${p.id})">Excluir</button></p>`)
+            .map(
+              (p) =>
+                `<p>${p.nome} - ${p.disc} <button onclick="excluirProfessor(${p.id})">Excluir</button></p>`,
+            )
             .join("");
 
           const agendamentos = JSON.parse(localStorage.agendamentos);
           const agendsEl = document.getElementById("agends");
-          const statusOptions = ["Pendente", "Confirmado", "Cancelado", "Concluído"];
+          const statusOptions = [
+            "Pendente",
+            "Confirmado",
+            "Cancelado",
+            "Concluído",
+          ];
 
           agendsEl.innerHTML = agendamentos
-            .map(a => {
+            .map((a) => {
               const options = statusOptions
-                .map(s => `<option value="${s}" ${a.status === s ? "selected" : ""}>${s}</option>`)
+                .map(
+                  (s) =>
+                    `<option value="${s}" ${a.status === s ? "selected" : ""}>${s}</option>`,
+                )
                 .join("");
               return `
                 <tr>
