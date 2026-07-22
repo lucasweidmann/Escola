@@ -360,6 +360,43 @@
         color: #fff;
         border-color: var(--coral);
       }
+
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px;
+        margin: 16px 0 20px;
+      }
+
+      .summary-card {
+        background: var(--cream);
+        border: 1px solid var(--line);
+        border-left: 4px solid var(--gold);
+        border-radius: 10px;
+        padding: 14px 16px;
+      }
+
+      .summary-card strong {
+        display: block;
+        color: var(--navy);
+        font-size: 1.5rem;
+        margin-top: 4px;
+      }
+
+      .filters-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+        gap: 12px;
+        margin: 16px 0;
+      }
+
+      @media (max-width: 820px) {
+        .filters-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
     </style>
   </head>
   <body>
@@ -568,6 +605,42 @@
 
         <div class="card">
           <h3>Agendamentos</h3>
+
+          <div class="summary-grid" aria-label="Resumo dos agendamentos">
+            <div class="summary-card">Total de registros<strong id="resumoTotal">0</strong></div>
+            <div class="summary-card">Pendentes<strong id="resumoPendentes">0</strong></div>
+            <div class="summary-card">Prioritários<strong id="resumoPrioritarios">0</strong></div>
+          </div>
+
+          <div class="filters-grid">
+            <div class="form-group">
+              <label for="buscaAgendamento">Pesquisar agendamento</label>
+              <input id="buscaAgendamento" placeholder="Nome, contato, código ou matéria" oninput="aplicarFiltros()" />
+            </div>
+            <div class="form-group">
+              <label for="filtroStatus">Status</label>
+              <select id="filtroStatus" onchange="aplicarFiltros()">
+                <option value="">Todos</option>
+                <option>Pendente</option>
+                <option>Confirmado</option>
+                <option>Cancelado</option>
+                <option>Concluído</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="filtroPrioridade">Prioridade</label>
+              <select id="filtroPrioridade" onchange="aplicarFiltros()">
+                <option value="">Todas</option>
+                <option value="prioritario">Prioritário</option>
+                <option value="normal">Normal</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="filtroData">Data</label>
+              <input type="date" id="filtroData" onchange="aplicarFiltros()" />
+            </div>
+          </div>
+
           <div class="table-wrap">
             <table>
               <thead>
@@ -994,6 +1067,63 @@
             .join("");
 
           const agendamentos = JSON.parse(localStorage.agendamentos);
+          atualizarResumo(agendamentos);
+          renderAgendamentosFiltrados(agendamentos);
+        }
+
+        function atualizarResumo(agendamentos) {
+          document.getElementById("resumoTotal").textContent = agendamentos.length;
+          document.getElementById("resumoPendentes").textContent = agendamentos.filter(
+            (a) => (a.status || "Pendente") === "Pendente",
+          ).length;
+          document.getElementById("resumoPrioritarios").textContent = agendamentos.filter(
+            (a) => Boolean(a.atendimentoPrioritario),
+          ).length;
+        }
+
+        window.aplicarFiltros = function () {
+          const agendamentos = JSON.parse(localStorage.agendamentos);
+          renderAgendamentosFiltrados(agendamentos);
+        };
+
+        function renderAgendamentosFiltrados(agendamentos) {
+          const termo = (document.getElementById("buscaAgendamento")?.value || "")
+            .trim()
+            .toLowerCase();
+          const status = document.getElementById("filtroStatus")?.value || "";
+          const prioridade = document.getElementById("filtroPrioridade")?.value || "";
+          const data = document.getElementById("filtroData")?.value || "";
+
+          const filtrados = agendamentos.filter((a) => {
+            const textoBusca = [
+              a.id,
+              a.respNome,
+              a.respTel,
+              a.respEmail,
+              a.aluno,
+              a.materia,
+              a.professor,
+            ]
+              .filter(Boolean)
+              .join(" ")
+              .toLowerCase();
+
+            const correspondeBusca = !termo || textoBusca.includes(termo);
+            const correspondeStatus = !status || (a.status || "Pendente") === status;
+            const correspondeData = !data || a.data === data;
+            const correspondePrioridade =
+              !prioridade ||
+              (prioridade === "prioritario" && Boolean(a.atendimentoPrioritario)) ||
+              (prioridade === "normal" && !a.atendimentoPrioritario);
+
+            return (
+              correspondeBusca &&
+              correspondeStatus &&
+              correspondeData &&
+              correspondePrioridade
+            );
+          });
+
           const agendsEl = document.getElementById("agends");
           const statusOptions = [
             "Pendente",
@@ -1002,7 +1132,12 @@
             "Concluído",
           ];
 
-          agendsEl.innerHTML = agendamentos
+          if (filtrados.length === 0) {
+            agendsEl.innerHTML = '<tr><td colspan="16">Nenhum agendamento encontrado.</td></tr>';
+            return;
+          }
+
+          agendsEl.innerHTML = filtrados
             .map((a) => {
               const options = statusOptions
                 .map(
