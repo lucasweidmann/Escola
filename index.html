@@ -604,7 +604,10 @@
         </div>
 
         <div class="card">
-          <h3>Agendamentos</h3>
+          <div class="section-head">
+            <h3>Agendamentos</h3>
+            <button class="btn-outline" onclick="exportarBackup()">Exportar backup</button>
+          </div>
 
           <div class="summary-grid" aria-label="Resumo dos agendamentos">
             <div class="summary-card">Total de registros<strong id="resumoTotal">0</strong></div>
@@ -962,6 +965,11 @@
             return;
           }
 
+          const confirmado = confirm(
+            "Confirma o envio deste agendamento de aula experimental?",
+          );
+          if (!confirmado) return;
+
           const agora = new Date();
           const dataCadastro =
             agora.toLocaleDateString("pt-BR") +
@@ -1015,7 +1023,27 @@
           }
         };
 
-        /* ---------- ADMINISTRAÇÃO ---------- */
+        /* ---------- BACKUP PREVENTIVO ---------- */
+        window.exportarBackup = function () {
+          const backup = {
+            geradoEm: new Date().toISOString(),
+            usuarios: JSON.parse(localStorage.usuarios || "[]"),
+            professores: JSON.parse(localStorage.professores || "[]"),
+            agendamentos: JSON.parse(localStorage.agendamentos || "[]"),
+          };
+
+          const arquivo = new Blob([JSON.stringify(backup, null, 2)], {
+            type: "application/json",
+          });
+          const url = URL.createObjectURL(arquivo);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `backup_nota10_${new Date().toISOString().slice(0, 10)}.json`;
+          link.click();
+          URL.revokeObjectURL(url);
+        };
+
+        /* ---------- ADMINISTRAÇÃO: PROFESSORES E AGENDAMENTOS ---------- */
         window.salvarProfessor = function () {
           clearAllFieldErrors();
           const nome = document.getElementById("pnome").value.trim();
@@ -1172,8 +1200,8 @@
             .join("");
         }
 
-        // compatibilidade: exibe dados antigos (anteriores à migração) com fallback
-        // Já tratado nos templates com || "" e || "Pendente"
+        /* ---------- COMPATIBILIDADE COM REGISTROS ANTIGOS ---------- */
+        // Os templates usam valores padrão para campos inexistentes em dados antigos.
 
         carregar();
       })();
